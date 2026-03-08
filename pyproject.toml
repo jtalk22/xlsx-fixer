@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "xlsx-fixer"
+version = "1.0.0"
+description = "Fix Mac Excel corruption in openpyxl-generated .xlsx files"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [
+    { name = "James Lambert", email = "james@revasser.nyc" },
+]
+keywords = [
+    "excel",
+    "xlsx",
+    "openpyxl",
+    "mac",
+    "corruption",
+    "shared-strings",
+    "ooxml",
+    "fix",
+    "repair",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Office/Business :: Financial :: Spreadsheet",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/jtalk22/xlsx-fixer"
+Documentation = "https://github.com/jtalk22/xlsx-fixer#readme"
+Issues = "https://github.com/jtalk22/xlsx-fixer/issues"
+Changelog = "https://github.com/jtalk22/xlsx-fixer/blob/main/CHANGELOG.md"
+
+[project.scripts]
+xlsx-fixer = "xlsx_fixer.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/xlsx_fixer"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
