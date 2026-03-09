@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0 (2026-03-09)
+
+- `fix_batch()` — Fix all xlsx files in a directory (in-place or to output dir)
+- `batch` CLI command — `xlsx-fixer batch <dir> --key <KEY>` (licensed feature)
+- License key validation via Lemon Squeezy with activation caching
+  - 7-day cache TTL, 30-day offline grace period
+  - Supports `--key`, `--key-file`, and default `~/.xlsx-fixer/license-key`
+  - Zero new dependencies (urllib.request)
+- Recursive directory scanning with `--recursive` flag
+- Skips Excel temp files (~$ prefix)
+- 60 tests (27 → 60)
+
 ## 1.0.0 (2026-03-08)
 
 Initial release.

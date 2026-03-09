@@ -19,7 +19,7 @@ CLI:
     xlsx-fixer check report.xlsx
 """
 
-from xlsx_fixer.fixer import fix, check, Issue
+from xlsx_fixer.fixer import fix, fix_batch, check, Issue
 
-__version__ = "1.0.0"
-__all__ = ["fix", "check", "Issue", "__version__"]
+__version__ = "1.1.0"
+__all__ = ["fix", "fix_batch", "check", "Issue", "__version__"]
