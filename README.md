@@ -1,135 +1,89 @@
 # xlsx-fixer
 
-**Fix the Mac Excel "We found a problem with some content" error in openpyxl-generated .xlsx files.**
+**Stop delivering "corrupted" Excel files to your clients and executives.**
+A zero-dependency delivery-assurance layer for Python data pipelines.
 
-openpyxl hardcodes inline strings (`t="inlineStr"`) for every text cell. Mac Excel's strict OOXML parser rejects this, showing a recovery dialog on *every open*. Windows Excel silently accepts it, which is why the bug goes unnoticed during development.
-
-`xlsx-fixer` rewrites the ZIP to use a proper shared string table (`xl/sharedStrings.xml`), removes inconsistent calc state, and strips illegal control characters. One function call. Zero dependencies beyond the standard library.
-
-## The Problem
-
-If you generate `.xlsx` files with Python's `openpyxl` library and open them on Mac, you see:
+If you generate `.xlsx` files with Python's `openpyxl` library and open them on a Mac, your stakeholders will see this terrifying warning:
 
 > **"We found a problem with some content in 'file.xlsx'. Do you want us to try to recover as much as we can?"**
 
-After clicking "Yes":
+For a solo developer, this is annoying. For a data engineering team delivering automated reporting to C-suite executives or high-value clients, **this completely destroys the professional credibility of the automation pipeline.**
 
-> **"Removed Records: String properties from /xl/sharedStrings.xml part"**
+## The Root Cause
+`openpyxl` hardcodes inline strings (`t="inlineStr"`) for every text cell. Mac Excel's strict OOXML parser rejects this. The openpyxl maintainer has [declined to fix this](https://foss.heptapod.net/openpyxl/openpyxl/-/issues/1804) for 17+ years.
 
-This happens because openpyxl writes every text cell as an inline string (`<c t="inlineStr"><is><t>text</t></is></c>`) instead of referencing a shared string table. The openpyxl maintainer has [declined to fix this](https://foss.heptapod.net/openpyxl/openpyxl/-/issues/1804) for 17+ years.
+`xlsx-fixer` intercepts the generated file, safely rebuilds the XML to use a proper shared string table (`xl/sharedStrings.xml`), drops inconsistent calculation states, and strips illegal control characters. 
 
-## Install
+---
+
+## The Open Source Tier (Free)
+This repository contains the core `fix()` engine. It is perfect for ad-hoc scripts and individual files. **Zero dependencies** beyond the standard library.
 
 ```bash
 pip install xlsx-fixer
 ```
 
-**Zero dependencies.** Uses only Python standard library (`zipfile`, `xml.etree.ElementTree`).
-
-## Usage
-
-### Python API
-
-```python
-from xlsx_fixer import fix, check
-
-# Fix in-place (after openpyxl wb.save())
-from openpyxl import Workbook
-wb = Workbook()
-ws = wb.active
-ws["A1"] = "Hello, Mac Excel!"
-wb.save("report.xlsx")
-
-fix("report.xlsx")  # That's it. Mac-safe now.
-
-# Fix to a new file
-fix("report.xlsx", output="report_fixed.xlsx")
-
-# Check without modifying
-issues = check("report.xlsx")
-for issue in issues:
-    print(f"[{issue.severity}] {issue.code}: {issue.message}")
-```
-
-### CLI
-
-```bash
-# Fix in-place
-xlsx-fixer fix report.xlsx
-
-# Fix to new file
-xlsx-fixer fix report.xlsx -o fixed.xlsx
-
-# Check without modifying
-xlsx-fixer check report.xlsx
-
-# Version
-xlsx-fixer --version
-```
-
-### Integration with openpyxl
-
-Add two lines to your existing code:
+### Usage (Python)
 
 ```python
 from openpyxl import Workbook
 from xlsx_fixer import fix
 
 wb = Workbook()
-# ... your existing workbook code ...
+ws = wb.active
+ws["A1"] = "Hello, Mac Excel!"
 
-wb.calculation.fullCalcOnLoad = None  # Remove inconsistent calc state
-wb.save("output.xlsx")
-fix("output.xlsx")  # Convert inline strings to shared string table
+# 1. Save normally
+wb.save("report.xlsx")
+
+# 2. Fix it before sending to the client
+fix("report.xlsx") 
 ```
 
-## What It Fixes
+### Usage (CLI)
 
-| # | Issue | Root Cause | Impact |
-|---|-------|-----------|--------|
-| 1 | **Inline strings** | openpyxl hardcodes `t="inlineStr"` in `cell/_writer.py` | "We found a problem" dialog on every Mac open |
-| 2 | **fullCalcOnLoad** | openpyxl sets `fullCalcOnLoad="1"` without generating `calcChain.xml` | Recovery dialog; formulas show 0 |
-| 3 | **Stale calcChain.xml** | References cells that no longer contain formulas | "Removed Records: Formula" in repair log |
-| 4 | **Control characters** | Illegal XML 1.0 chars (U+0000-U+0008, etc.) in cell values | ST_Xstring validation failures |
+```bash
+# Fix a single file in-place
+xlsx-fixer fix report.xlsx
 
-## How It Works
+# Check a file for corruption patterns without modifying
+xlsx-fixer check report.xlsx
+```
 
-1. Reads the entire `.xlsx` ZIP into memory
-2. Parses every `xl/worksheets/sheet*.xml`
-3. Finds all `<c t="inlineStr"><is><t>TEXT</t></is></c>` cells
-4. Builds a deduplicated shared string table
-5. Rewrites each cell as `<c t="s"><v>INDEX</v></c>`
-6. Creates `xl/sharedStrings.xml` with `<sst>` root element
-7. Adds relationship to `xl/_rels/workbook.xml.rels`
-8. Adds Override to `[Content_Types].xml`
-9. Removes `fullCalcOnLoad` from `<calcPr>` in `xl/workbook.xml`
-10. Optionally removes stale `calcChain.xml`
-11. Writes new ZIP back to the same (or specified output) path
+---
 
-The fix is **idempotent** — running it twice is safe and the second run is a no-op.
+## 🚀 The Enterprise Tier (xlsx-fixer Pro)
+For data engineering teams and CI/CD pipelines, we offer **xlsx-fixer Pro**. 
 
-## Performance
+If you are running Airflow, GitHub Actions, or processing hundreds of files, the Open Source version is too slow and requires too much manual code modification. 
 
-The fix operates entirely in-memory. On a real production workbook (11 sheets, 195 properties, 448 verification checks, ~100KB):
+**xlsx-fixer Pro** is a pre-compiled, un-hackable binary (Linux/Mac/Windows) designed for scale.
 
-- **~30ms** on Apple Silicon
-- **~50ms** on Intel Mac
-- Scales linearly with file size
+### Pro Features:
+*   **The Drop-In Patch:** Don't rewrite 100 legacy scripts. Just call `xlsx_fixer_pro.patch_openpyxl()` once, and every `wb.save()` call across your entire application is automatically fixed.
+*   **High-Performance Batch Processing:** A multithreaded CLI command (`batch`) that rips through directories of hundreds of `.xlsx` files using all available CPU cores.
+*   **Big Data Safe Mode:** Disk-backed XML streaming prevents Out-of-Memory (OOM) crashes on 500MB+ Excel dumps.
+*   **CI Audit Reporting:** Generates machine-readable `JSON` reports proving data integrity for your compliance logs.
 
-## Why Not Just Fix openpyxl?
+### Commercial Licenses
 
-The maintainer has permanently refused to add shared string table support to the writer. The inline string behavior is hardcoded in `cell/_writer.py` lines 21-22 and 70-79 with no API flag to change it. This isn't a bug they plan to fix — it's a design decision from 2007.
+| License | Target Audience | Features | Link |
+| :--- | :--- | :--- | :--- |
+| **Pipeline License** | Solo Automators / Agencies | Unlocks the `batch` command, drop-in patches, and CI execution for a single pipeline. | [Buy Pipeline License ($299/yr)](https://revasser-llc.lemonsqueezy.com/checkout/buy/87b672ef-1143-4bd5-b593-b32c9df28f9f) |
+| **Site License** | Enterprise Data Teams | Uncapped deployments across all cloud runners, dev machines, and internal tools. | [Buy Site License ($899/yr)](https://revasser-llc.lemonsqueezy.com/checkout/buy/8c7977ac-2f87-455e-a979-56b6033ce947) |
 
-With 249M+ openpyxl downloads per month and 7,400+ dependent packages, this affects an enormous number of Python developers who generate Excel files for Mac users.
+*Upon purchase, you will immediately receive your License Key and a secure download link for the compiled CI binaries.*
 
-## Tested On
+---
 
-- Python 3.9 - 3.14
-- openpyxl 3.0.x - 3.1.x
-- Mac Excel 16.x (Microsoft 365)
-- Windows Excel (passes through unchanged)
-- LibreOffice Calc (passes through unchanged)
+## What It Fixes Under The Hood
+
+| # | Issue | Impact |
+|---|-------|--------|
+| 1 | **Inline strings** | "We found a problem" dialog on every Mac open |
+| 2 | **fullCalcOnLoad** | Recovery dialog; formulas show 0 |
+| 3 | **Stale calcChain.xml** | "Removed Records: Formula" in repair log |
+| 4 | **Control characters** | Illegal XML 1.0 chars violate OOXML ST_Xstring |
 
 ## License
-
-MIT License. See [LICENSE](LICENSE) for details.
+The free `xlsx-fixer` engine is licensed under the MIT License. See [LICENSE](LICENSE) for details.

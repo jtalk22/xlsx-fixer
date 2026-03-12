@@ -412,48 +412,4 @@ def fix(
     return stats
 
 
-def fix_batch(
-    directory: Union[str, Path],
-    output_dir: Union[str, Path, None] = None,
-    *,
-    remove_calc_chain: bool = True,
-    strip_control_chars: bool = True,
-    recursive: bool = False,
-) -> list[dict]:
-    """Fix all xlsx files in a directory.
 
-    Args:
-        directory: Path to scan for xlsx files.
-        output_dir: Directory for fixed files. If None, fixes in-place.
-        remove_calc_chain: Remove calcChain.xml if present.
-        strip_control_chars: Remove illegal XML control characters.
-        recursive: If True, scan subdirectories.
-
-    Returns:
-        List of dicts, each with 'file' (Path) and 'stats' (fix result) or 'error' (str).
-    """
-    directory = Path(directory)
-    if not directory.is_dir():
-        raise NotADirectoryError(f"Not a directory: {directory}")
-
-    pattern = "**/*.xlsx" if recursive else "*.xlsx"
-    files = sorted(directory.glob(pattern))
-
-    if output_dir is not None:
-        output_dir = Path(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-    results = []
-    for f in files:
-        # Skip temp files (Excel lock files start with ~$)
-        if f.name.startswith("~$"):
-            continue
-        out = output_dir / f.name if output_dir else None
-        try:
-            stats = fix(f, output=out, remove_calc_chain=remove_calc_chain,
-                        strip_control_chars=strip_control_chars)
-            results.append({"file": f, "stats": stats})
-        except Exception as e:
-            results.append({"file": f, "error": str(e)})
-
-    return results
